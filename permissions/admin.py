@@ -1,13 +1,36 @@
 from django.contrib import admin
+from permissions.models import ObjectPermission, PrincipalRoleRelation, Role, Permission
 
-from permissions.models import ObjectPermission
-admin.site.register(ObjectPermission)
 
-from permissions.models import Permission
-admin.site.register(Permission)
+class ObjectPermissionAdmin(admin.ModelAdmin):
+    list_display = ('pk', 'role', 'permission', 'content')
+    list_filter = ('role', 'permission')
 
-from permissions.models import Role
-admin.site.register(Role)
+admin.site.register(ObjectPermission, ObjectPermissionAdmin)
 
-from permissions.models import PrincipalRoleRelation
-admin.site.register(PrincipalRoleRelation)
+
+class PermissionAdmin(admin.ModelAdmin):
+    list_display = ('codename', 'name', 'types')
+    search_fields = ('codename', 'name')
+
+    def types(self, obj):
+        return ','.join([x.name for x in obj.content_types.all()])
+
+admin.site.register(Permission, PermissionAdmin)
+
+
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ('codename', 'name', 'perms')
+    search_fields = ('codename', 'name')
+
+    def perms(self, obj):
+        return ','.join([x.codename for x in obj.global_permissions.all()])
+
+admin.site.register(Role, RoleAdmin)
+
+
+class PrincipalRoleRelationAdmin(admin.ModelAdmin):
+    list_display = ('pk', 'role', 'user', 'group', 'content')
+    list_filter = ('role', 'group')
+
+admin.site.register(PrincipalRoleRelation, PrincipalRoleRelationAdmin)
