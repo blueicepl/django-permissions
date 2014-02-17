@@ -5,6 +5,7 @@ from permissions.models import ObjectPermission, PrincipalRoleRelation, Role, Pe
 class ObjectPermissionAdmin(admin.ModelAdmin):
     list_display = ('pk', 'role', 'permission', 'content')
     list_filter = ('role', 'permission')
+    search_fields = ('content_id', 'role__codename')
 
 admin.site.register(ObjectPermission, ObjectPermissionAdmin)
 
@@ -32,6 +33,7 @@ admin.site.register(Role, RoleAdmin)
 class PrincipalRoleRelationAdmin(admin.ModelAdmin):
     list_display = ('pk', 'role', 'user', 'group', 'content')
     list_filter = ('role', 'group')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'content_id')
     raw_id_fields = ('role', 'user', 'group')
 
 admin.site.register(PrincipalRoleRelation, PrincipalRoleRelationAdmin)
