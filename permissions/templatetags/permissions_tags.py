@@ -26,11 +26,11 @@ class PermissionComparisonNode(template.Node):
         end_tag = 'endifhasperm'
         nodelist_true = parser.parse(('else', end_tag))
         token = parser.next_token()
-        if token.contents == 'else': # there is an 'else' clause in the tag
+        if token.contents == 'else':  # there is an 'else' clause in the tag
             nodelist_false = parser.parse((end_tag,))
             parser.delete_first_token()
         else:
-            nodelist_false = ""
+            nodelist_false = template.TextNode('')
 
         return cls(permission, context_object, nodelist_true, nodelist_false)
 
@@ -53,7 +53,7 @@ class PermissionComparisonNode(template.Node):
         if permissions.utils.has_permission(obj, request.user, codename):
             return self.nodelist_true.render(context)
         else:
-            return self.nodelist_false
+            return self.nodelist_false.render(context)
 
 
 @register.tag
