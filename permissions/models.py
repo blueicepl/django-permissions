@@ -60,6 +60,9 @@ class ObjectPermission(models.Model):
     def __unicode__(self):
         return u"%s / %s / %s - %s" % (self.permission.name, self.role, self.content_type, self.content_id)
 
+    class Meta:
+        unique_together = ('role', 'permission', 'content_type', 'content_id')
+
 
 class ObjectPermissionInheritanceBlock(models.Model):
     """Blocks the inheritance for specific permission and object.
