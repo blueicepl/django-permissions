@@ -647,8 +647,9 @@ def register_permission(name, codename, ctypes=None):
         ctypes = []
 
     # Permission with same codename and/or name must not exist.
-    if Permission.objects.filter(Q(name=name) | Q(codename=codename)):
-        return False
+    query = Permission.objects.filter(Q(name=name) | Q(codename=codename))
+    if query.count():
+        return query[0]
 
     p = Permission.objects.create(name=name, codename=codename)
 
