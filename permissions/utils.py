@@ -2,7 +2,6 @@
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.db.models import Q
-from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -287,6 +286,8 @@ def get_roles(user, obj=None):
 def get_global_roles(principal):
     """Returns *direct* global roles of passed principal (user or group).
     """
+    from django.contrib.auth.models import Group
+
     user_class = get_user_model()
     if isinstance(principal, user_class):
         return [prr.role for prr in PrincipalRoleRelation.objects.filter(
@@ -426,7 +427,7 @@ def has_permission(obj, user, codename, roles=None):
     if roles is None:
         roles = []
 
-    if not user.is_anonymous():
+    if not user.is_anonymous:
         roles.extend(get_roles(user, obj))
 
     result = False
@@ -435,26 +436,26 @@ def has_permission(obj, user, codename, roles=None):
 
     if obj:
         ctype = ContentType.objects.get_for_model(obj)
-
+    else:
+        ctype = None
 
     # in case obj is none
     if obj is None or obj_is_type:
-        # chceck if user/role has those permission
-        filter = {
+        # check if user/role has those permission
+        _filter = {
             'codename': codename,
             'roles_globals__in': roles
         }
         if obj_is_type:
-            filter['content_types'] = ctype
+            _filter['content_types'] = ctype
 
-        if Permission.objects.filter(**filter).count() > 0:
-            result = True
+        result = Permission.objects.filter(**_filter).exists()
     else:
         while obj is not None:
             if ObjectPermission.objects.filter(content_type=ctype,
-                                                content_id=obj.id,
-                                                role__in=roles,
-                                                permission__codename=codename).count() > 0:
+                                               content_id=obj.id,
+                                               role__in=roles,
+                                               permission__codename=codename).exists():
                 result = True
                 break
 
@@ -559,6 +560,7 @@ def get_group(id_or_name):
     """Returns the group with passed id or name. If it not exists it returns
     None.
     """
+    from django.contrib.auth.models import Group
     try:
         return Group.objects.get(pk=id_or_name)
     except (Group.DoesNotExist, ValueError):
@@ -608,6 +610,8 @@ def get_user(id_or_username):
 def has_group(user, group):
     """Returns True if passed user has passed group.
     """
+    from django.contrib.auth.models import Group
+
     if isinstance(group, str):
         group = Group.objects.get(name=group)
 
@@ -721,6 +725,8 @@ def register_group(name):
     name
         The unique group name.
     """
+    from django.contrib.auth.models import Group
+
     group, created = Group.objects.get_or_create(name=name)
     if created:
         return group
@@ -739,6 +745,8 @@ def unregister_group(name):
     name
         The unique role name.
     """
+    from django.contrib.auth.models import Group
+
     try:
         group = Group.objects.get(name=name)
     except Group.DoesNotExist:

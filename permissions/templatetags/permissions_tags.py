@@ -1,12 +1,13 @@
 # django imports
 from django import template
+from django.template.defaulttags import CommentNode
 
 import permissions.utils
 register = template.Library()
 
 
 class PermissionComparisonNode(template.Node):
-    """Implements a node to provide an if current user has passed permission 
+    """Implements a node to provide an if current user has passed permission
     for current object.
     """
     @classmethod
@@ -21,8 +22,7 @@ class PermissionComparisonNode(template.Node):
         elif len(bits) == 2:
             permission = bits[1]
         else:
-            raise template.TemplateSyntaxError(
-                "'%s' tag takes one or two arguments" % bits[0])
+            raise template.TemplateSyntaxError("'%s' tag takes one or two arguments" % bits[0])
         end_tag = 'endifhasperm'
         nodelist_true = parser.parse(('else', end_tag))
         token = parser.next_token()
@@ -30,7 +30,7 @@ class PermissionComparisonNode(template.Node):
             nodelist_false = parser.parse((end_tag,))
             parser.delete_first_token()
         else:
-            nodelist_false = template.TextNode('')
+            nodelist_false = CommentNode()
 
         return cls(permission, context_object, nodelist_true, nodelist_false)
 

@@ -1,6 +1,7 @@
 # permissions imports
 import permissions.utils
 
+
 class ObjectPermissionsBackend(object):
     """Django backend for object permissions. Needs Django 1.2.
 

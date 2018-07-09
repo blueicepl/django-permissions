@@ -23,6 +23,7 @@ admin.site.register(Permission, PermissionAdmin)
 class RoleAdmin(admin.ModelAdmin):
     list_display = ('codename', 'name', 'perms')
     search_fields = ('codename', 'name')
+    filter_horizontal = ('global_permissions',)
 
     def perms(self, obj):
         return ','.join([x.codename for x in obj.global_permissions.all()])

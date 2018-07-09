@@ -1,14 +1,14 @@
 # django imports
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.db import models
 from django.contrib.auth.models import Group
-from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import ugettext_lazy as _
 
 # permissions imports
-import permissions.utils
+# import permissions.utils
 
 
 class Permission(models.Model):
@@ -29,7 +29,7 @@ class Permission(models.Model):
     """
     name = models.CharField(_(u"Name"), max_length=100, unique=True)
     codename = models.CharField(_(u"Codename"), max_length=100, unique=True)
-    content_types = models.ManyToManyField(ContentType, verbose_name=_(u"Content Types"), blank=True, null=True,
+    content_types = models.ManyToManyField(ContentType, verbose_name=_(u"Content Types"), blank=True,
                                            related_name="content_types")
 
     def __unicode__(self):
@@ -55,7 +55,7 @@ class ObjectPermission(models.Model):
 
     content_type = models.ForeignKey(ContentType, verbose_name=_(u"Content type"))
     content_id = models.PositiveIntegerField(verbose_name=_(u"Content id"))
-    content = generic.GenericForeignKey(ct_field="content_type", fk_field="content_id")
+    content = GenericForeignKey(ct_field="content_type", fk_field="content_id")
 
     def __unicode__(self):
         return u"%s / %s / %s - %s" % (self.permission.name, self.role, self.content_type, self.content_id)
@@ -79,7 +79,7 @@ class ObjectPermissionInheritanceBlock(models.Model):
 
     content_type = models.ForeignKey(ContentType, verbose_name=_(u"Content type"))
     content_id = models.PositiveIntegerField(verbose_name=_(u"Content id"))
-    content = generic.GenericForeignKey(ct_field="content_type", fk_field="content_id")
+    content = GenericForeignKey(ct_field="content_type", fk_field="content_id")
 
     def __unicode__(self):
         return u"%s / %s - %s" % (self.permission, self.content_type, self.content_id)
@@ -97,7 +97,7 @@ class Role(models.Model):
     name = models.CharField(max_length=100, unique=True)
     codename = models.CharField(_(u"Codename"), max_length=100, unique=True)
     global_permissions = models.ManyToManyField(Permission, verbose_name=_(u"Global permissions"),
-                                                blank=True, null=True, related_name="roles_globals")
+                                                blank=True, related_name="roles_globals")
 
     class Meta:
         ordering = ("name", )
@@ -105,10 +105,12 @@ class Role(models.Model):
     def __unicode__(self):
         return self.name
 
+    # noinspection PyUnusedLocal
     def add_principal(self, principal, content=None):
         """Addes the given principal (user or group) ot the Role.
         """
-        return permissions.utils.add_role(principal, self)
+        from permissions.utils import add_role
+        return add_role(principal, self)
 
     def get_groups(self, content=None):
         """Returns all groups which has this role assigned. If content is given
@@ -165,7 +167,7 @@ class PrincipalRoleRelation(models.Model):
 
     content_type = models.ForeignKey(ContentType, verbose_name=_(u"Content type"), blank=True, null=True)
     content_id = models.PositiveIntegerField(verbose_name=_(u"Content id"), blank=True, null=True)
-    content = generic.GenericForeignKey(ct_field="content_type", fk_field="content_id")
+    content = GenericForeignKey(ct_field="content_type", fk_field="content_id")
 
     def __unicode__(self):
         if self.user:
@@ -174,7 +176,7 @@ class PrincipalRoleRelation(models.Model):
             principal = self.group
 
         return u"%s - %s" % (principal, self.role)
-        
+
     def get_principal(self):
         """Returns the principal.
         """
