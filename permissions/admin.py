@@ -7,6 +7,7 @@ class ObjectPermissionAdmin(admin.ModelAdmin):
     list_filter = ('role', 'permission')
     search_fields = ('content_id', 'role__codename')
 
+
 admin.site.register(ObjectPermission, ObjectPermissionAdmin)
 
 
@@ -16,6 +17,7 @@ class PermissionAdmin(admin.ModelAdmin):
 
     def types(self, obj):
         return ','.join([x.name for x in obj.content_types.all()])
+
 
 admin.site.register(Permission, PermissionAdmin)
 
@@ -28,13 +30,16 @@ class RoleAdmin(admin.ModelAdmin):
     def perms(self, obj):
         return ','.join([x.codename for x in obj.global_permissions.all()])
 
+
 admin.site.register(Role, RoleAdmin)
 
 
 class PrincipalRoleRelationAdmin(admin.ModelAdmin):
-    list_display = ('pk', 'role', 'user', 'group', 'content')
+    # list_display = ('pk', 'role', 'user', 'group', 'content')
+    list_display = ('pk', 'role', 'user', 'group')
     list_filter = ('role', 'group')
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'content_id')
     raw_id_fields = ('role', 'user', 'group')
+
 
 admin.site.register(PrincipalRoleRelation, PrincipalRoleRelationAdmin)
