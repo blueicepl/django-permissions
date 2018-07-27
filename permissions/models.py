@@ -5,10 +5,17 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.db import models
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
 
 # permissions imports
 # import permissions.utils
+
+
+class PermissionManager(models.Manager):
+
+    def get_by_natural_key(self, codename):
+        return self.get(codename=codename)
 
 
 class Permission(models.Model):
@@ -32,8 +39,13 @@ class Permission(models.Model):
     content_types = models.ManyToManyField(ContentType, verbose_name=_(u"Content Types"), blank=True,
                                            related_name="content_types")
 
+    objects = PermissionManager()
+
     def __unicode__(self):
         return u"%s (%s)" % (self.name, self.codename)
+
+    def natural_key(self):
+        return self.codename,
 
 
 class ObjectPermission(models.Model):
@@ -85,6 +97,12 @@ class ObjectPermissionInheritanceBlock(models.Model):
         return u"%s / %s - %s" % (self.permission, self.content_type, self.content_id)
 
 
+class RoleManager(models.Manager):
+
+    def get_by_natural_key(self, codename):
+        return self.get(codename=codename)
+
+
 class Role(models.Model):
     """A role gets permissions to do something. Principals (users and groups)
     can only get permissions via roles.
@@ -99,11 +117,16 @@ class Role(models.Model):
     global_permissions = models.ManyToManyField(Permission, verbose_name=_(u"Global permissions"),
                                                 blank=True, related_name="roles_globals")
 
+    objects = RoleManager()
+
     class Meta:
         ordering = ("name", )
 
     def __unicode__(self):
         return self.name
+
+    def natural_key(self):
+        return self.codename,
 
     # noinspection PyUnusedLocal
     def add_principal(self, principal, content=None):
@@ -119,11 +142,12 @@ class Role(models.Model):
         if content:
             ctype = ContentType.objects.get_for_model(content)
             prrs = PrincipalRoleRelation.objects\
-                .filter(role=self, content_id__in=(None, content.id), content_type__in=(None, ctype))\
-                .exclude(group=None)
+                .filter(role=self).filter(Q(content_id__isnull=True) | Q(content_id=content.id))\
+                .filter(Q(content_type__isnull=True) | Q(content_type=ctype))\
+                .exclude(group__isnull=True)
         else:
-            prrs = PrincipalRoleRelation.objects.filter(role=self, content_id=None, content_type=None)\
-                .exclude(group=None)
+            prrs = PrincipalRoleRelation.objects.filter(role=self, content_id__isnull=True,
+                                                        content_type__isnull=True).exclude(group__isnull=True)
 
         return [prr.group for prr in prrs]
 
@@ -176,6 +200,9 @@ class PrincipalRoleRelation(models.Model):
             principal = self.group
 
         return u"%s - %s" % (principal, self.role)
+
+    def natural_key(self):
+        return self.role, self.user, self.group, self.content_type, self.content_id
 
     def get_principal(self):
         """Returns the principal.
