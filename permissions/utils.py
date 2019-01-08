@@ -263,57 +263,58 @@ def get_roles(user, obj=None):
 
         # groups = user.groups.all()
 
-        # # Gobal roles for user and the user's groups
-        # if groups:
-        #     role_ids.update(PrincipalRoleRelation.objects.filter(content_id__isnull=True)
-        #                                                  .filter(Q(user=user) | Q(group__in=groups))
-        #                                                  .values_list('role', flat=True))
-        # else:
-        #     role_ids.update(PrincipalRoleRelation.objects.filter(content_id__isnull=True, user=user)
-        #                                                  .values_list('role', flat=True))
-        #
-        # # Local roles for user and the user's groups and all ancestors of the
-        # # passed object.
-        # while obj and not isinstance(obj, type):
-        #
-        #     if groups:
-        #         role_ids.update(PrincipalRoleRelation.objects.filter(content_type=ctype, content_id=obj.pk)
-        #                                                      .filter(Q(user=user) | Q(group__in=groups))
-        #                                                      .values_list('role_id', flat=True))
-        #     else:
-        #         role_ids.update(PrincipalRoleRelation.objects.filter(content_type=ctype, content_id=obj.pk, user=user)
-        #                                                      .values_list('role_id', flat=True))
-        #
-        #     try:
-        #         obj = obj.get_parent_for_permissions()
-        #     except AttributeError:
-        #         obj = None
-        #
-        # return Role.objects.filter(pk__in=role_ids)
+        # Gobal roles for user and the user's groups
+        if groups:
+            role_ids.update(PrincipalRoleRelation.objects.filter(content_id__isnull=True)
+                                                         .filter(Q(user=user) | Q(group__in=groups))
+                                                         .values_list('role', flat=True))
+        else:
+            role_ids.update(PrincipalRoleRelation.objects.filter(content_id__isnull=True, user=user)
+                                                         .values_list('role', flat=True))
 
         if obj:
             ctype = ContentType.objects.get_for_model(obj)
         else:
             ctype = None
 
-        if groups:
-            query = Role.objects.filter(principalrolerelation__content_id__isnull=True)\
-                .filter(Q(principalrolerelation__user=user) | Q(principalrolerelation__group__in=groups))
+        # Local roles for user and the user's groups and all ancestors of the
+        # passed object.
+        while obj and not isinstance(obj, type):
 
-            if obj and not isinstance(obj, type):
-                query = query.union(Role.objects.filter(principalrolerelation__content_type=ctype,
-                                                        principalrolerelation__content_id=obj.pk)
-                                    .filter(Q(principalrolerelation__user=user) |
-                                            Q(principalrolerelation__group__in=groups)))
-        else:
-            query = Role.objects.filter(principalrolerelation__content_id__isnull=True,
-                                        principalrolerelation__user=user)
+            if groups:
+                role_ids.update(PrincipalRoleRelation.objects.filter(content_type=ctype, content_id=obj.pk)
+                                                             .filter(Q(user=user) | Q(group__in=groups))
+                                                             .values_list('role_id', flat=True))
+            else:
+                role_ids.update(PrincipalRoleRelation.objects.filter(content_type=ctype, content_id=obj.pk, user=user)
+                                                             .values_list('role_id', flat=True))
 
-            if obj and not isinstance(obj, type):
-                query.union(Role.objects.filter(principalrolerelation__content_type=ctype,
-                                                principalrolerelation__content_id=obj.pk,
-                                                principalrolerelation__user=user))
-        query = query.distinct()
+            try:
+                obj = obj.get_parent_for_permissions()
+            except AttributeError:
+                obj = None
+
+        query = Role.objects.filter(pk__in=role_ids)
+
+
+        # if groups:
+        #     query = Role.objects.filter(principalrolerelation__content_id__isnull=True)\
+        #         .filter(Q(principalrolerelation__user=user) | Q(principalrolerelation__group__in=groups))
+        #
+        #     if obj and not isinstance(obj, type):
+        #         query = query.union(Role.objects.filter(principalrolerelation__content_type=ctype,
+        #                                                 principalrolerelation__content_id=obj.pk)
+        #                             .filter(Q(principalrolerelation__user=user) |
+        #                                     Q(principalrolerelation__group__in=groups)))
+        # else:
+        #     query = Role.objects.filter(principalrolerelation__content_id__isnull=True,
+        #                                 principalrolerelation__user=user)
+        #
+        #     if obj and not isinstance(obj, type):
+        #         query.union(Role.objects.filter(principalrolerelation__content_type=ctype,
+        #                                         principalrolerelation__content_id=obj.pk,
+        #                                         principalrolerelation__user=user))
+        # query = query.distinct()
 
         if obj:
             return query

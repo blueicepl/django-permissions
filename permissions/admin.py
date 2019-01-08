@@ -36,7 +36,7 @@ admin.site.register(Role, RoleAdmin)
 
 class PrincipalRoleRelationAdmin(admin.ModelAdmin):
     # list_display = ('pk', 'role', 'user', 'group', 'content')
-    list_display = ('pk', 'role', 'user', 'group')
+    list_display = ('pk', 'role', 'user', 'group', 'content_type', 'content_id')
     list_filter = ('role', 'group')
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'content_id')
     raw_id_fields = ('role', 'user', 'group')
