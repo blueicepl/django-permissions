@@ -428,20 +428,35 @@ def remove_permission(obj, role, permission):
         The permission which should be removed. Either a permission object
         or the codename of a permission.
     """
-    if not isinstance(permission, Permission):
-        try:
-            permission = Permission.objects.get(codename=permission)
-        except Permission.DoesNotExist:
-            return False
+    params = {}
+
+    if hasattr(role, '__iter__'):
+        params['role__in'] = role
+    else:
+        params['role'] = role
+
+    if hasattr(permission, '__iter__'):
+        params['permission__in'] = permission
+    else:
+        if not isinstance(permission, Permission):
+            try:
+                params['permission'] = Permission.objects.get(codename=permission)
+            except Permission.DoesNotExist:
+                return False
+        else:
+            params['permission'] = permission
 
     ct = ContentType.objects.get_for_model(obj)
+    params['content_type'] = ct
+    params['content_id'] = obj.pk
 
     try:
-        op = ObjectPermission.objects.get(role=role, content_type=ct, content_id=obj.id, permission=permission)
+        # op = ObjectPermission.objects.filter(role=role, content_type=ct, content_id=obj.id, permission=permission).delete()
+        ObjectPermission.objects.filter(**params).delete()
     except ObjectPermission.DoesNotExist:
         return False
 
-    op.delete()
+    # op.delete()
     return True
 
 
