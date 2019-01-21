@@ -219,3 +219,9 @@ class PrincipalRoleRelation(models.Model):
             self.group = principal
 
     principal = property(get_principal, set_principal)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user_id', 'group_id', 'role_id', 'content_type_id']),
+            models.Index(fields=['user_id', 'content_type_id'])
+        ]
