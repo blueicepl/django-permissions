@@ -496,18 +496,19 @@ def has_permission(obj, user, codename, roles=None):
     else:
         ctype = None
 
-    # in case obj is none
-    if obj is None or obj_is_type:
-        # check if user/role has those permission
-        _filter = {
-            'codename': codename,
-            'roles_globals__in': roles
-        }
-        if obj_is_type:
-            _filter['content_types'] = ctype
+    # always check global permissions
+    # check if user/role has those permission
+    _filter = {
+        'codename': codename,
+        'roles_globals__in': roles
+    }
+    if obj_is_type:
+        _filter['content_types'] = ctype
 
-        result = Permission.objects.filter(**_filter).exists()
-    else:
+    result = Permission.objects.filter(**_filter).exists()
+
+    # in case obj is none
+    if not result and obj is not None and not obj_is_type:
         while obj is not None:
             if ObjectPermission.objects.filter(content_type=ctype,
                                                content_id=obj.id,
