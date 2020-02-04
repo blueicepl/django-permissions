@@ -68,16 +68,17 @@ def add_local_role(obj, principal, role):
 
     if isinstance(principal, user_class):
         try:
-            PrincipalRoleRelation.objects.get(user=principal, role=role, content_id=obj.id, content_type=ctype)
+            PrincipalRoleRelation.objects.get(user=principal, group=None, role=role,
+                                              content_id=obj.id, content_type=ctype)
         except PrincipalRoleRelation.DoesNotExist:
-            PrincipalRoleRelation.objects.create(user=principal, role=role, content=obj)
+            PrincipalRoleRelation.objects.create(user=principal, group=None, role=role, content=obj)
             return True
     else:
         try:
             PrincipalRoleRelation.objects.get(user__isnull=True, group=principal, role=role,
                                               content_id=obj.id, content_type=ctype)
         except PrincipalRoleRelation.DoesNotExist:
-            PrincipalRoleRelation.objects.create(group=principal, role=role, content=obj)
+            PrincipalRoleRelation.objects.create(user=None, group=principal, role=role, content=obj)
             return True
 
     return False
@@ -98,10 +99,10 @@ def remove_role(principal, role):
     try:
         if isinstance(principal, user_class):
             ppr = PrincipalRoleRelation.objects\
-                .get(user=principal, role=role, content_id=None, content_type=None)
+                .get(user=principal, group__isnull=True, role=role, content_id=None, content_type=None)
         else:
             ppr = PrincipalRoleRelation.objects\
-                .get(group=principal, role=role, content_id=None, content_type=None)
+                .get(user__isnull=True, group=principal, role=role, content_id=None, content_type=None)
 
     except PrincipalRoleRelation.DoesNotExist:
         return False
@@ -134,11 +135,11 @@ def remove_local_role(obj, principal, role):
         ctype = ContentType.objects.get_for_model(obj)
 
         if isinstance(principal, user_class):
-            ppr = PrincipalRoleRelation.objects.get(
-                user=principal, role=role, content_id=obj.id, content_type=ctype)
+            ppr = PrincipalRoleRelation.objects.get(user=principal, group__isnull=True, role=role,
+                                                    content_id=obj.id, content_type=ctype)
         else:
-            ppr = PrincipalRoleRelation.objects.get(
-                group=principal, role=role, content_id=obj.id, content_type=ctype)
+            ppr = PrincipalRoleRelation.objects.get(user__isnull=True, group=principal, role=role,
+                                                    content_id=obj.id, content_type=ctype)
 
     except PrincipalRoleRelation.DoesNotExist:
         return False
@@ -158,11 +159,11 @@ def remove_roles(principal):
     """
     user_class = get_user_model()
     if isinstance(principal, user_class):
-        ppr = PrincipalRoleRelation.objects.filter(
-            user=principal, content_id=None, content_type=None)
+        ppr = PrincipalRoleRelation.objects.filter(user=principal, group__isnull=True,
+                                                   content_id=None, content_type=None)
     else:
-        ppr = PrincipalRoleRelation.objects.filter(
-            group=principal, content_id=None, content_type=None)
+        ppr = PrincipalRoleRelation.objects.filter(user__isnull=True, group=principal,
+                                                   content_id=None, content_type=None)
 
     if ppr:
         ppr.delete()
@@ -187,11 +188,11 @@ def remove_local_roles(obj, principal):
     ctype = ContentType.objects.get_for_model(obj)
 
     if isinstance(principal, user_class):
-        ppr = PrincipalRoleRelation.objects.filter(
-            user=principal, content_id=obj.id, content_type=ctype)
+        ppr = PrincipalRoleRelation.objects.filter(user=principal, group__isnull=True,
+                                                   content_id=obj.id, content_type=ctype)
     else:
-        ppr = PrincipalRoleRelation.objects.filter(
-            group=principal, content_id=obj.id, content_type=ctype)
+        ppr = PrincipalRoleRelation.objects.filter(user__isnull=True, group=principal,
+                                                   content_id=obj.id, content_type=ctype)
 
     if ppr:
         ppr.delete()
@@ -211,7 +212,6 @@ def remove_local_roles_by_role(obj, roles):
     roles
         role or roles as codename/list of codenames or Role/list or Role objects
     """
-    user_class = get_user_model()
     ctype = ContentType.objects.get_for_model(obj)
 
     if not isinstance(roles, (list, tuple)):
