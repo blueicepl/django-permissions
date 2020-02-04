@@ -74,7 +74,8 @@ def add_local_role(obj, principal, role):
             return True
     else:
         try:
-            PrincipalRoleRelation.objects.get(group=principal, role=role, content_id=obj.id, content_type=ctype)
+            PrincipalRoleRelation.objects.get(user__isnull=True, group=principal, role=role,
+                                              content_id=obj.id, content_type=ctype)
         except PrincipalRoleRelation.DoesNotExist:
             PrincipalRoleRelation.objects.create(group=principal, role=role, content=obj)
             return True
