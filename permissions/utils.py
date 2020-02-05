@@ -17,8 +17,18 @@ from permissions.models import Role
 # Roles ######################################################################
 
 
-def add_role(principal, role):
-    """Adds a global role to a principal.
+def __build_params(principal, role=None, obj=None):
+    return {
+        'user': None, 'group': None,
+        'role': Role.objects.get(codename=role) if isinstance(role, basestring) else role,
+        'content_id': obj.pk if obj else None,
+        'content_type': ContentType.objects.get_for_model(obj) if obj else None,
+        'user' if isinstance(principal, get_user_model()) else 'group': principal
+    }
+
+
+def add_role(principal, role, obj=None):
+    """Adds a global/local role to a principal.
 
     **Parameters:**
 
@@ -27,27 +37,16 @@ def add_role(principal, role):
 
     role
         The role which is assigned.
+
+    obj
+        If present, the object for which the principal gets the local role.
     """
-    user_class = get_user_model()
 
-    if isinstance(principal, user_class):
-        try:
-            PrincipalRoleRelation.objects.get(user=principal, role=role, content_id=None, content_type=None)
-        except PrincipalRoleRelation.DoesNotExist:
-            PrincipalRoleRelation.objects.create(user=principal, role=role)
-            return True
-    else:
-        try:
-            PrincipalRoleRelation.objects.get(group=principal, role=role, content_id=None, content_type=None)
-        except PrincipalRoleRelation.DoesNotExist:
-            PrincipalRoleRelation.objects.create(group=principal, role=role)
-            return True
-
-    return False
+    return PrincipalRoleRelation.objects.get_or_create(**__build_params(principal, role, obj))[1]
 
 
 def add_local_role(obj, principal, role):
-    """Adds a local role to a principal.
+    """Adds a local role to a principal * kept for backward compatibility
 
     **Parameters:**
 
@@ -60,31 +59,10 @@ def add_local_role(obj, principal, role):
     role
         The role which is assigned.
     """
-    user_class = get_user_model()
-    ctype = ContentType.objects.get_for_model(obj)
-
-    if isinstance(role, basestring):
-        role = Role.objects.get(codename=role)
-
-    if isinstance(principal, user_class):
-        try:
-            PrincipalRoleRelation.objects.get(user=principal, group=None, role=role,
-                                              content_id=obj.id, content_type=ctype)
-        except PrincipalRoleRelation.DoesNotExist:
-            PrincipalRoleRelation.objects.create(user=principal, group=None, role=role, content=obj)
-            return True
-    else:
-        try:
-            PrincipalRoleRelation.objects.get(user__isnull=True, group=principal, role=role,
-                                              content_id=obj.id, content_type=ctype)
-        except PrincipalRoleRelation.DoesNotExist:
-            PrincipalRoleRelation.objects.create(user=None, group=principal, role=role, content=obj)
-            return True
-
-    return False
+    return add_role(principal=principal, role=role, obj=obj)
 
 
-def remove_role(principal, role):
+def remove_role(principal, role, obj=None):
     """Removes role from passed principal.
 
     **Parameters:**
@@ -95,25 +73,17 @@ def remove_role(principal, role):
     role
         The role which is removed.
     """
-    user_class = get_user_model()
     try:
-        if isinstance(principal, user_class):
-            ppr = PrincipalRoleRelation.objects\
-                .get(user=principal, group__isnull=True, role=role, content_id=None, content_type=None)
-        else:
-            ppr = PrincipalRoleRelation.objects\
-                .get(user__isnull=True, group=principal, role=role, content_id=None, content_type=None)
+        PrincipalRoleRelation.objects.get(**__build_params(principal, role, obj)).delete()
+
+        return True
 
     except PrincipalRoleRelation.DoesNotExist:
         return False
-    else:
-        ppr.delete()
-
-    return True
 
 
 def remove_local_role(obj, principal, role):
-    """Removes role from passed object and principle.
+    """Removes role from passed object and principle. * kept for backward compatibility
 
     **Parameters:**
 
@@ -126,30 +96,10 @@ def remove_local_role(obj, principal, role):
     role
         The role which is removed.
     """
-    user_class = get_user_model()
-
-    if isinstance(role, basestring):
-        role = Role.objects.get(codename=role)
-
-    try:
-        ctype = ContentType.objects.get_for_model(obj)
-
-        if isinstance(principal, user_class):
-            ppr = PrincipalRoleRelation.objects.get(user=principal, group__isnull=True, role=role,
-                                                    content_id=obj.id, content_type=ctype)
-        else:
-            ppr = PrincipalRoleRelation.objects.get(user__isnull=True, group=principal, role=role,
-                                                    content_id=obj.id, content_type=ctype)
-
-    except PrincipalRoleRelation.DoesNotExist:
-        return False
-    else:
-        ppr.delete()
-
-    return True
+    return remove_role(principal=principal, role=role, obj=obj)
 
 
-def remove_roles(principal):
+def remove_roles(principal, obj=None):
     """Removes all roles passed principal (user or group).
 
     **Parameters:**
@@ -157,24 +107,13 @@ def remove_roles(principal):
     principal
         The principal (user or group) from which all roles are removed.
     """
-    user_class = get_user_model()
-    if isinstance(principal, user_class):
-        ppr = PrincipalRoleRelation.objects.filter(user=principal, group__isnull=True,
-                                                   content_id=None, content_type=None)
-    else:
-        ppr = PrincipalRoleRelation.objects.filter(user__isnull=True, group=principal,
-                                                   content_id=None, content_type=None)
 
-    if ppr:
-        ppr.delete()
-        return True
-    else:
-        return False
+    return PrincipalRoleRelation.objects.filter(**__build_params(principal=principal, obj=obj)).delete()
 
 
 def remove_local_roles(obj, principal):
     """Removes all local roles from passed object and principal (user or
-    group).
+    group). * kept for backward compatibility
 
     **Parameters:**
 
@@ -184,25 +123,12 @@ def remove_local_roles(obj, principal):
     principal
         The principal (user or group) from which the roles are removed.
     """
-    user_class = get_user_model()
-    ctype = ContentType.objects.get_for_model(obj)
 
-    if isinstance(principal, user_class):
-        ppr = PrincipalRoleRelation.objects.filter(user=principal, group__isnull=True,
-                                                   content_id=obj.id, content_type=ctype)
-    else:
-        ppr = PrincipalRoleRelation.objects.filter(user__isnull=True, group=principal,
-                                                   content_id=obj.id, content_type=ctype)
-
-    if ppr:
-        ppr.delete()
-        return True
-    else:
-        return False
+    return remove_roles(principal=principal, obj=obj)
 
 
 def remove_local_roles_by_role(obj, roles):
-    """Removes all local roles from roles list
+    """Removes all local roles from roles list *
 
     **Parameters:**
 
@@ -212,24 +138,13 @@ def remove_local_roles_by_role(obj, roles):
     roles
         role or roles as codename/list of codenames or Role/list or Role objects
     """
-    ctype = ContentType.objects.get_for_model(obj)
 
-    if not isinstance(roles, (list, tuple)):
-        roles = [roles]
+    roles = roles if isinstance(roles, (list, tuple)) else [roles]
 
-    _local_roles = []
-    for role in roles:
-        if isinstance(role, basestring):
-            role = Role.objects.get(codename=role)
-        _local_roles.append(role)
-
-    ppr = PrincipalRoleRelation.objects.filter(role__in=_local_roles, content_id=obj.id, content_type=ctype)
-
-    if ppr:
-        ppr.delete()
-        return True
-    else:
-        return False
+    return PrincipalRoleRelation.objects.filter(
+        role__in=[Role.objects.get(codename=_r) if isinstance(_r, basestring) else _r for _r in roles],
+        content_id=obj.pk if obj else None, content_type=ContentType.objects.get_for_model(obj) if obj else None
+    ).delete()
 
 
 def get_roles(user, obj=None):
@@ -345,15 +260,14 @@ def get_global_roles(principal):
 def get_local_roles(obj, principal):
     """Returns *direct* local roles for passed principal and content object.
     """
-    user_class = get_user_model()
-    ctype = ContentType.objects.get_for_model(obj)
 
-    if isinstance(principal, user_class):
-        return [prr.role for prr in PrincipalRoleRelation.objects.filter(
-            user=principal, content_id=obj.id, content_type=ctype)]
-    else:
-        return [prr.role for prr in PrincipalRoleRelation.objects.filter(
-            group=principal, content_id=obj.id, content_type=ctype)]
+    params = {
+        'user' if isinstance(principal, get_user_model()) else 'group': principal,
+        'content_id': obj.id,
+        'content_type': ContentType.objects.get_for_model(obj)
+    }
+
+    return [prr.role for prr in PrincipalRoleRelation.objects.filter(**params)]
 
 
 # Permissions ################################################################
@@ -405,12 +319,9 @@ def grant_permission(obj, role, permission):
             return False
 
     ct = ContentType.objects.get_for_model(obj)
-    try:
-        ObjectPermission.objects.get(role=role, content_type=ct, content_id=obj.id, permission=permission)
-    except ObjectPermission.DoesNotExist:
-        ObjectPermission.objects.create(role=role, content=obj, permission=permission)
 
-    return True
+    return ObjectPermission.objects.get_or_create(role=role, permission=permission,
+                                                  content_type=ct, content_id=obj.id)[1]
 
 
 def remove_permission(obj, role, permission):
